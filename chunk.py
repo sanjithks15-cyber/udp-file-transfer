@@ -7,9 +7,9 @@ def get_chunks_by_number(filename,chunk_no, chunk_size):
 
    try:
        with open(filename, 'rb') as f:     # return one chunk of data based on the chunk number and chunk size
-       f.seek(chunk_no * chunk_size) 
-       data = f.read(chunk_size)
-       return data   
+        f.seek(chunk_no * chunk_size) 
+        data = f.read(chunk_size)
+        return data   
                   
    except FileNotFoundError:
        print("File not found.")

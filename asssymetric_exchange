@@ -1,0 +1,26 @@
+from Crypto.PublicKey import RSA
+from Crypto.Cipher import PKCS1_OAEP
+
+class AsymmetricEncryption :
+  def __init__(self) :
+    self.public_key = None
+    self.private_key = None
+
+  def generate_keys(self) :  
+    key = RSA.generate(2048)
+    self.private_key = key
+    self.public_key = key.publickey()
+
+    return self.public_key.exportKey()
+  @staticmethod
+  def encrypt_key(aes_key, reciever_public_key):
+    # Import the bytes back into an RSA key object
+    recipient_key = RSA.import_key(reciever_public_key)
+        # Use OAEP padding for modern security
+    cipher_rsa = PKCS1_OAEP.new(recipient_key)
+    return cipher_rsa.encrypt(aes_key)
+
+  def decrypt_key(self, encrypted_key):
+        # Use the private key to unlock the symmetric key
+        cipher_rsa = PKCS1_OAEP.new(self.private_key)
+        return cipher_rsa.decrypt(encrypted_key)

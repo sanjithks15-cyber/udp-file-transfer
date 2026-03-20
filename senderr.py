@@ -9,7 +9,7 @@ windowsize = 3
 
   
 
-filename = "file.txt"
+filename = input("Enter file name to send: ")
 total=get_total_chunks(filename, 1024)
 
 sock = socket(AF_INET, SOCK_DGRAM)
@@ -17,8 +17,9 @@ sock.settimeout(0.5)
 
 base =0
 next=0
-
-while next < total:
+ack_counter=0
+try:
+  while  next < total-1 or ack_counter < total-1:
     while next < base + windowsize and next < total:
         data=get_chunks_by_number(filename,next,1024)
         packet=Message_Format("DATA", next, data)
@@ -26,14 +27,19 @@ while next < total:
         print(f"Sent chunk {next}")
         next =next+1
 
-try:
-    ack_packet,addr=sock.recvfrom(1024)
-    if ack_packet.msg_type == "ACK":
-        print(f"Received ACK for chunk {ack_packet.seqnum}")
-        base = ack_packet.seqnum + 1
-except timeout:
-    print(f"timeout sending chunk {base} again")
-    next=base  
-
-sock.close()
+    try:
+        ack_packet,addr=sock.recvfrom(1024)
+        ack = Message_Format.decode(ack_packet)
+        ack_counter = ack.seqnum
+        if ack.msg_type == "ACK" and ack.seqnum >= base:
+          print(f"Received ACK for chunk {ack.seqnum}")
+          base = ack.seqnum + 1
+    except timeout:
+        print(f"timeout sending chunk {base} again")
+        next=base  
+finally:
+    end_packet = Message_Format("END", 0, b'')
+    sock.sendto(end_packet.encode(), (servername, serverport))
+    print("closing socket")
+    sock.close()
 
