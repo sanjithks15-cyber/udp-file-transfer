@@ -2,11 +2,29 @@
 from socket import *
 from time import sleep
 from protocol import Message_Format
+from symmetric import *
+from assymetric_exchange import *
 
 serverport = 5001
 serversocket= socket(AF_INET, SOCK_DGRAM)
 serversocket.bind(('',serverport) )
 print("server is running")
+
+asym = assymetrric_encryption()
+public_key = asym.generate_keys()
+handshake , addr = serversocket.recvfrom(2048)
+handshake_msg = Message_Format.decode(handshake)
+if handshake_msg and handshake_msg.msg_type == "HANDSHAKE":
+     print("Received handshake, sending public key.")
+     
+     pub_key_packet = Message_Format("PUB", 0, public_key).encode()
+     serversocket.sendto(pub_key_packet, addr)
+     encrypted_key, addr = serversocket.recvfrom(2048)
+     aes_key = asym.decrypt_key(encrypted_key)
+     sym = SymmetricEncryption(aes_key)
+     sym_key = sym.key
+     print("Symmetric key established, ready to receive file.")
+
 
 expected_seqnum = 0
 filename = "received_file.bin"
@@ -16,7 +34,10 @@ try:
 
    while True:
          packet, addr = serversocket.recvfrom(2048)
-         message = Message_Format.decode(packet)
+         
+         packet_decrypted = sym.decrypt(packet)
+         message = Message_Format.decode(packet_decrypted)
+         
          if message is None:
               print("Dropped corrupted packet (Checksum mismatch).")
               continue

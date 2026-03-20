@@ -12,6 +12,7 @@ class AsymmetricEncryption :
     self.public_key = key.publickey()
 
     return self.public_key.exportKey()
+  
   @staticmethod
   def encrypt_key(aes_key, reciever_public_key):
     # Import the bytes back into an RSA key object

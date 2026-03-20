@@ -8,7 +8,7 @@ class SymmetricEncryption:
         else:
             self.key = key
         self.cipher = Fernet(self.key)
-
+        
     def encrypt(self,data):
         return self.cipher.encrypt(data)
 
