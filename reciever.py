@@ -1,20 +1,26 @@
 
 from socket import *
-from time import sleep
 from protocol import Message_Format
 from symmetric import *
 from assymetric_exchange import *
 
 serverport = 5001
-serversocket= socket(AF_INET, SOCK_DGRAM)
-serversocket.bind(('',serverport) )
+serversocket = socket(AF_INET, SOCK_DGRAM)
+serversocket.bind(('', serverport))
 print("server is running")
 
 clients = {}
 
 while True:
-    packet, addr = serversocket.recvfrom(2048)
-    
+    try:
+        packet, addr = serversocket.recvfrom(2048)
+    except ConnectionResetError:
+        # Windows may raise this on UDP when peer closes; keep listening.
+        continue
+    except Exception as e:
+        print("recvfrom error:", e)
+        continue
+
     if addr not in clients:
         # New client: process handshake
         handshake_msg = Message_Format.decode(packet)

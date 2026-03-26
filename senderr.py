@@ -16,13 +16,27 @@ filename = input("Enter file name to send: ")
 total=get_total_chunks(filename, 1024)
 
 sock = socket(AF_INET, SOCK_DGRAM)
-sock.settimeout(0.5)
+sock.settimeout(1)
 
 sym = SymmetricEncryption()
 des_key = sym.key
 handshake = Message_Format("HANDSHAKE", 0, des_key).encode()
-sock.sendto(handshake.encode(), (servername, serverport))
-aes_packet, addr = sock.recvfrom(2048)
+sock.sendto(handshake, (servername, serverport))
+
+# Retry handshake response on timeout
+max_handshake_retries = 5
+retries = 0
+while retries < max_handshake_retries:
+    try:
+        aes_packet, addr = sock.recvfrom(2048)
+        break
+    except timeout:
+        retries += 1
+        print(f"Handshake timeout #{retries}, retrying...")
+        sock.sendto(handshake, (servername, serverport))
+else:
+    raise TimeoutError("Handshake failed after retries")
+
 aes_msg = Message_Format.decode(aes_packet)
 if aes_msg and aes_msg.msg_type == "PUB":
     print("Received public key, encrypting symmetric key.")
@@ -45,6 +59,7 @@ try:
         packet_encoded = packet.encode()
         packet_encrypted = sym.encrypt(packet_encoded)
         sock.sendto(packet_encrypted, (servername, serverport))
+        
         print(f"Sent chunk {next}")
         next =next+1
 
