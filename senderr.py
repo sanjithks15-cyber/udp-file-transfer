@@ -6,8 +6,12 @@ from protocol import *
 from symmetric import *
 from assymetric_exchange import *
 
-servername= 'localhost'
+servername= input('Enter server IP address: ')
 serverport = 5001
+
+
+
+
 windowsize = 3
 
   
@@ -37,6 +41,7 @@ while retries < max_handshake_retries:
 else:
     raise TimeoutError("Handshake failed after retries")
 
+des_key = sym.key
 aes_msg = Message_Format.decode(aes_packet)
 if aes_msg and aes_msg.msg_type == "PUB":
     print("Received public key, encrypting symmetric key.")

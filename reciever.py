@@ -39,20 +39,32 @@ while True:
         client = clients[addr]
         
         if client['state'] == 'sent_pub':
-            # Expect encrypted key
-            encrypted_key = packet
-            aes_key = client['asym'].decrypt_key(encrypted_key)
-            sym = SymmetricEncryption(aes_key)
-            client['sym'] = sym
-            client['expected_seqnum'] = 0
-            client['filename'] = f"received_file_{addr[0]}_{addr[1]}.bin"
-            client['file'] = open(client['filename'], 'wb')
-            client['state'] = 'receiving'
-            print("Symmetric key established, ready to receive file.")
+            # Check if this is a retried handshake
+            retry_msg = Message_Format.decode(packet)
+            if retry_msg and retry_msg.msg_type == "HANDSHAKE":
+                # Resend public key
+                pub_key_packet = Message_Format("PUB", 0, client['pub_key']).encode()
+                serversocket.sendto(pub_key_packet, addr)
+                print("Retried handshake received, resending public key.")
+            else:
+                # Assume it's the encrypted key
+                encrypted_key = packet
+                aes_key = client['asym'].decrypt_key(encrypted_key)
+                sym = SymmetricEncryption(aes_key)
+                client['sym'] = sym
+                client['expected_seqnum'] = 0
+                client['filename'] = f"received_file_{addr[0]}_{addr[1]}.bin"
+                client['file'] = open(client['filename'], 'wb')
+                client['state'] = 'receiving'
+                print("Symmetric key established, ready to receive file.")
         
         elif client['state'] == 'receiving':
-            packet_decrypted = client['sym'].decrypt(packet)
-            message = Message_Format.decode(packet_decrypted)
+            try:
+                packet_decrypted = client['sym'].decrypt(packet)
+                message = Message_Format.decode(packet_decrypted)
+            except Exception as e:
+                print(f"Dropped corrupted packet (Decryption or decode error: {e})")
+                continue
             
             if message is None:
                 print("Dropped corrupted packet (Checksum mismatch).")
